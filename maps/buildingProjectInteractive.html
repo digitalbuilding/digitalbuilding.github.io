@@ -52,6 +52,10 @@
                 locationsOk = false;
             }
         }
+        if (!locationsOk) {
+            return;
+        }
+        $("#map").show();
 
          // The map, centered at provided center
          const map = new google.maps.Map(document.getElementById("map"), {zoom: 17, center: loc_c});
@@ -103,7 +107,7 @@
  <body>
      <div class="container h-100 p-4">
      <div class="row border border-dark">
-         <div class="col p-2"><div id="map"></div></div>
+         <div class="col p-2"><div id="map" style="display: hidden;"></div></div>
      </div>
      <div id="markerStd" style="display: none;">
          <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0, 0, 349,349"
