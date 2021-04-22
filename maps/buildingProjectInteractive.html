@@ -1,0 +1,211 @@
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+     <title>Baueingaben</title>
+     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6" crossorigin="anonymous">
+     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js" integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" crossorigin="anonymous"></script>
+     <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"></script>
+     <style type="text/css">
+     /* Set the size of the div element that contains the map */
+     #map {
+         height: 600px;
+         /* The height is 400 pixels */
+         width: 100%;
+         /* The width is the width of the web page */
+     }
+     </style>
+     <script>
+     $(document).ready(function() {
+         let searchParams = new URLSearchParams(window.location.search)
+         let g = "";
+         if (searchParams.has('g')) {
+             g = searchParams.get('g');
+         }
+         const gurl = `https://maps.googleapis.com/maps/api/js?key=${g}&callback=initMap&libraries=&v=weekly`;
+         var script = document.createElement("script");
+         script.type = "text/javascript";
+         script.src = gurl;
+         document.body.appendChild(script);
+     });
+
+     // Initialize and add the map
+     function initMap() {
+        // ?latL=46.9673282106173&lngL=7.461577001649668&latB=46.9663282106173&lngB=7.462577001649668&g=xyz
+        let searchParams = new URLSearchParams(window.location.search)
+        let loc_c = { lat: -72.21580084938697, lng: 0.5691768776531001 };
+        let loc_l = { lat: -72.21580084938697, lng: 0.5691768776531001 };
+        let loc_b = { lat: -72.21580084938697, lng: 0.5691768776531001 };
+        let locationsOk = true;
+        if (searchParams.has('latL') && searchParams.has('lngL') && searchParams.has('latB') && searchParams.has('lngB')) {
+            try {
+                loc_l = { lat: parseFloat(searchParams.get('latL')), lng: parseFloat(searchParams.get('lngL')) };
+                loc_b = { lat: parseFloat(searchParams.get('latB')), lng: parseFloat(searchParams.get('lngB')) };
+                loc_c = { lat: (loc_l["lat"] + loc_b["lat"]) / 2, lng: (loc_l["lng"] + loc_b["lng"]) / 2 };
+            }
+            catch(err) {
+                locationsOk = false;
+            }
+        }
+
+         // The map, centered at provided center
+         const map = new google.maps.Map(document.getElementById("map"), {zoom: 17, center: loc_c});
+         // hide all points of interest
+         var noPoi = [{
+             featureType: "poi",
+             stylers: [{ visibility: "off" }]
+         }];
+         map.setOptions({styles: noPoi});
+
+         // define marker 'icons' (based on svg further down in DOM)
+         // encodeURIComponent is used because '#' in svg causes markers to be not rendered at all...
+         //   see https://robert.katzki.de/posts/inline-svg-as-google-maps-marker
+         var $markerPylon = document.getElementById('markerPylon'), markerPylonSvg = $markerPylon.innerHTML || '';
+         const svgMarkerPylon = {
+             anchor: new google.maps.Point(16, 24),
+             url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markerPylonSvg),
+             scaledSize: new google.maps.Size(32, 32)
+         };
+         var $markerStd = document.getElementById('markerStd'), markerStdSvg = $markerStd.innerHTML || '';
+         const svgMarker = {
+             anchor: new google.maps.Point(14, 14),
+             url: 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(markerStdSvg),
+             scaledSize: new google.maps.Size(28, 28)
+         };
+
+         // The markers
+         var m;
+
+         m = new google.maps.Marker({
+             position: loc_l,
+             map: map,
+             icon: svgMarker,
+             //animation: google.maps.Animation.BOUNCE,
+             //title: "Stauffacherstrasse 88, 3014 Bern"
+         });
+
+         m = new google.maps.Marker({
+             position: loc_b,
+             map: map,
+             icon: svgMarkerPylon,
+             //animation: google.maps.Animation.BOUNCE,
+             //title: "Installation einer Leuchtschrift an der Fassade (2703 BR 3118) Hilfikerstrasse 4a"
+         });
+
+     }
+     </script>
+ </head>
+ <body>
+     <div class="container h-100 p-4">
+     <div class="row border border-dark">
+         <div class="col p-2"><div id="map"></div></div>
+     </div>
+     <div id="markerStd" style="display: none;">
+         <svg xmlns:svg="http://www.w3.org/2000/svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0, 0, 349,349"
+             width="28" height="28" id="svg7200">
+             <defs id="defs7202">
+             <clipPath id="clipPath7139">
+                 <circle cx="392.2" cy="608.7" r="28.1" fill="black" />
+             </clipPath>
+             </defs>
+             <g transform="translate(63.825593,-301.83874)" id="layer1">
+             <g transform="matrix(5.6702893,0,0,5.6702893,-2112.2962,-2975.9241)" id="g7259">
+                 <circle cx="392.2" cy="608.8" r="30" stroke="darkgray" stroke-width="1.2" fill="#fcd205" />
+             </g>
+             </g>
+             <g transform="translate(63.825593,-301.83874)" id="layer1">
+             <g clip-path="url(#clipPath7139)" transform="matrix(5.6702893,0,0,5.6702893,-2112.2962,-2975.9241)" id="g7259">
+                 <g transform="translate(-2.5,3.5) matrix(0.2,0,0.252,-1.25,386.0705,621.77315)" id="g7123">
+                     <path d="m 0,1 1.568,7.362 -89.313,0 L -89.312,0 0,0 z" id="path7125"
+                         style="fill:#ffffff;fill-opacity:1;fill-rule:nonzero;stroke:none" />
+                 </g>
+                 <g transform="translate(-2.5,3.5) matrix(1.25,0,0,-1.25,-89.13375,816.41165)" id="g7135">
+                     <g id="g7137">
+                         <g transform="translate(379,170.5623)" id="g7159">
+                         <path
+                             d="m 0,0 c -0.206,-1.279 -1.073,-2.064 -2.187,-2.332 -0.269,-0.061 -0.765,-0.103 -1.052,-0.103 l -1.342,0 1.073,5.015 1.444,0 c 0.412,0 0.722,-0.041 0.97,-0.123 C -0.268,2.188 0.228,1.382 0,0 m -0.495,5.304 c -0.392,0.062 -0.95,0.102 -1.507,0.102 l -4.188,0 -3.302,-15.352 3.302,0 1.01,4.684 1.92,0 c 1.01,0 1.671,0.103 2.312,0.289 2.372,0.723 3.9,2.703 4.25,4.809 0.517,2.868 -0.927,4.994 -3.797,5.468"
+                             id="path7161" style="fill:#231f20;fill-opacity:1;fill-rule:nonzero;stroke:none" />
+                         </g>
+                         <g transform="translate(397,175.9812)" id="g7163">
+                         <path
+                             d="m 0,0 c 0,0 1.96,9.229 1.97,9.28 l -12.474,0 C -10.51,9.248 -13.097,-2.823 -13.107,-2.873 l 3.087,0 c 0.008,0.032 1.989,9.278 1.989,9.278 l 6.301,0 c 0,0 -1.979,-9.228 -1.989,-9.278 l 9.355,0 -1.241,-5.805 -9.308,0 c -0.007,-0.034 -1.859,-8.679 -1.859,-8.679 l -7.051,0 c -0.006,-0.034 -0.603,-2.866 -0.613,-2.914 l 10.141,0 c 0.005,0.032 1.868,8.699 1.868,8.699 l 9.272,0 C 6.852,-11.539 9.315,-0.049 9.326,0 L 0,0 z"
+                             id="path7165" style="fill:#ed1c24;fill-opacity:1;fill-rule:nonzero;stroke:none" />
+                         </g>
+                     </g>
+                 </g>
+             </g>
+             </g>
+         </svg>
+     </div>
+
+     <div id="markerPylon" style="display: none;">
+         <svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" id="svg2" viewBox="0 0 571.38 580.48"
+             version="1.1">
+             <defs id="defs4">
+                 <linearGradient id="linearGradient3695">
+                     <stop id="stop3697" style="stop-color:#ffffff" offset="0" />
+                     <stop id="stop3699" style="stop-color:#ffffff;stop-opacity:0" offset="1" />
+                 </linearGradient>
+                 <linearGradient id="linearGradient3626" y2="349.92" gradientUnits="userSpaceOnUse" x2="341.34"
+                     gradientTransform="translate(0,-8)" y1="328.92" x1="432.34">
+                     <stop id="stop3622" style="stop-color:#eeeeec" offset="0" />
+                     <stop id="stop3624" style="stop-color:#eeeeec;stop-opacity:0" offset="1" />
+                 </linearGradient>
+                 <linearGradient id="linearGradient3629" y2="387.68" gradientUnits="userSpaceOnUse" x2="645.22" y1="387.68"
+                     x1="300.55">
+                     <stop id="stop3609" style="stop-color:#2e3436" offset="0" />
+                     <stop id="stop3611" style="stop-color:#2e3436;stop-opacity:0" offset="1" />
+                 </linearGradient>
+                 <linearGradient id="linearGradient3701" y2="284.09" gradientUnits="userSpaceOnUse" x2="355.67"
+                     gradientTransform="translate(-1.4142 -12.243)" y1="284.09" x1="335.17" />
+                 <linearGradient id="linearGradient3705" y2="284.09" gradientUnits="userSpaceOnUse" x2="355.67"
+                     gradientTransform="translate(26.87 122.11)" y1="284.09" x1="335.17" />
+                 <linearGradient id="linearGradient3738" y2="1191.4" gradientUnits="userSpaceOnUse" x2="-573.71"
+                     gradientTransform="translate(337.65 -346.59)" y1="919.43" x1="-838.93">
+                     <stop id="stop3734" style="stop-color:#ce5c00" offset="0" />
+                     <stop id="stop3740" style="stop-color:#f57900" offset=".49952" />
+                     <stop id="stop3736" style="stop-color:#fcaf3e" offset="1" />
+                 </linearGradient>
+                 <filter id="filter3779" color-interpolation-filters="sRGB">
+                     <feGaussianBlur id="feGaussianBlur3781" stdDeviation="3.1485944" />
+                 </filter>
+                 <linearGradient id="linearGradient3791" y2="541.84" gradientUnits="userSpaceOnUse" x2="422.77" y1="497.99"
+                     x1="533.87">
+                     <stop id="stop3787" style="stop-color:#f6f6f5" offset="0" />
+                     <stop id="stop3789" style="stop-color:#f6f6f5;stop-opacity:0" offset="1" />
+                 </linearGradient>
+                 <filter id="filter3852" color-interpolation-filters="sRGB">
+                     <feGaussianBlur id="feGaussianBlur3854" stdDeviation="9.3747496" />
+                 </filter>
+             </defs>
+             <g id="layer1" transform="translate(22.932 -57.094)">
+                 <path id="path3817" style="filter:url(#filter3852);fill:#d3d7cf"
+                     d="m264.12 79.594c-16.569 0-30 8.2913-30 18.531 0 0.44371 0.0129 0.87659 0.0625 1.3125l-100.34 312.06-121.87 60.94c-16.536 8.2678-16.536 21.576 0 29.844l213.19 106.6c16.536 8.2678 43.152 8.2678 59.688 0l213.19-106.59c16.536-8.2678 16.536-21.576 0-29.844l-100.16-50.11-103.85-322.9c0.0496-0.43591 0.0937-0.86879 0.0937-1.3125 0-10.24-13.431-18.531-30-18.531z" />
+                 <rect id="rect3713" ry="33.371" style="stroke:#2e3436;stroke-width:8.9443;fill:url(#linearGradient3738)"
+                     transform="matrix(.89443 -.44721 .89443 .44721 0 0)" height="305.1" width="305.1" y="549.42" x="-531.41" />
+                 <path id="path3760" style="opacity:.25714;filter:url(#filter3779);fill:#2e3436"
+                     d="m304.53 536.39-169.02-1.21-78.883-55.62 117.07-72.48 130.83 129.31z" />
+                 <g id="g3762">
+                     <path id="path2816" style="stroke:#2e3436;stroke-width:8;fill:#f57900"
+                         d="m300.12 93.594c-16.569 0-30 8.2913-30 18.531 0 0.44371 0.0129 0.87659 0.0625 1.3125l-109 338.97 0.15625 0.25c3.8 45.32 64.47 81.34 138.75 81.34s134.95-36.02 138.75-81.344l0.1875-0.25-109-338.97c0.0496-0.43591 0.0937-0.86879 0.0937-1.3125 0-10.24-13.431-18.531-30-18.531z" />
+                     <path id="path2833" style="fill:url(#linearGradient3629)"
+                         d="m439.48 387.68c0 47.421-62.201 85.863-138.93 85.863-76.728 0-138.93-38.442-138.93-85.863s62.201-85.863 138.93-85.863c76.728 0 138.93 38.442 138.93 85.863z"
+                         transform="matrix(0.128 0 0 0.128 261.23 62.998)" />
+                     <path id="path3681" style="fill:#eeeeec"
+                         d="m401.41 355.5c-25.341 16.678-61.346 27.099-101.29 27.099-40.636 0-77.213-10.781-102.62-27.969l-16.844 51.938c24.223 25.17 68.65 42.031 119.47 42.031 49.64 0 93.175-16.094 117.73-40.299" />
+                     <path id="path3666" style="fill:#eeeeec"
+                         d="m363.94 235.01c-19.107 6.1199-40.804 13.585-63.812 13.585-23.033 0-44.747-7.4627-63.875-13.594l-18.938 58.688c23.127 10.627 51.783 20.906 82.812 20.906 30.721 0 59.106-10.163 82.104-20.599" />
+                     <path id="path3615" style="fill:url(#linearGradient3626)"
+                         d="m327.29 129.16-15.152 5.0508 61.028 378.46c32.143-10 62.854-58.12 58.813-58.12-4.0406 0-103.68-323.37-104.69-325.39z" />
+                     <path id="path3685" style="fill:url(#linearGradient3701)"
+                         d="m333.75 249.57 8.4853 46.669 12.021-4.2426v-45.255l-20.506 2.8284z" />
+                     <path id="path3703" style="fill:url(#linearGradient3705)"
+                         d="m362.04 383.92 8.4853 46.669 12.021-4.2426 12.728-52.326-33.234 9.8995z" />
+                 </g>
+                 <path id="path3783" style="opacity:.26122;fill:url(#linearGradient3791)"
+                     d="m536.33 477.52-224.5 106.74s-1.4142 19.092 4.2426 18.385c5.6569-0.70711 217.58-107.69 217.58-107.69 10-8 8.3284-16.728 2.6716-17.435z" />
+             </g>
+         </svg>
+     </div>
+
+ </body>
+ </html>
