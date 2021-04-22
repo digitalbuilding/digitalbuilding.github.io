@@ -20,13 +20,19 @@
          let g = "";
          if (searchParams.has('g')) {
              g = searchParams.get('g');
+             const gurl = `https://maps.googleapis.com/maps/api/js?key=${g}&callback=initMap&libraries=&v=weekly`;
+             var script = document.createElement("script");
+             script.type = "text/javascript";
+             script.src = gurl;
+             document.body.appendChild(script);
          }
-         const gurl = `https://maps.googleapis.com/maps/api/js?key=${g}&callback=initMap&libraries=&v=weekly`;
-         var script = document.createElement("script");
-         script.type = "text/javascript";
-         script.src = gurl;
-         document.body.appendChild(script);
      });
+      
+     function gm_authFailure() {
+         /* Code */
+         alert("failed to authenticate with google maps");
+         $("#map").hide();
+     };
 
      // Initialize and add the map
      function initMap() {
