@@ -27,6 +27,11 @@
              document.body.appendChild(script);
          }
      });
+     
+      function gm_authFailure() {
+          /* Code */
+          ..
+      };
 
      // Initialize and add the map
      function initMap() {
@@ -49,7 +54,7 @@
         if (!locationsOk) {
             return;
         }
-        $("#map_container").show();
+        $("#map_container").removeClass('invisible').addClass('visible');
 
          // The map, centered at provided center
          const map = new google.maps.Map(document.getElementById("map"), {zoom: 17, center: loc_c});
@@ -100,7 +105,7 @@
  </head>
  <body>
      <div class="container h-100 p-4">
-     <div class="row border border-dark" id="map_container" style="display: hidden;">
+     <div class="row border border-dark invisible" id="map_container">
          <div class="col p-2"><div id="map"></div></div>
      </div>
      <div id="markerStd" style="display: none;">
