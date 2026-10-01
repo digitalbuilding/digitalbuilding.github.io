@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Baueingabe</title>
+    <style type="text/css">
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: Arial, sans-serif; }
+        .viewer { max-width: 1140px; margin: auto; padding: 24px; }
+        #map_container { border: 1px solid #212529; padding: 8px; }
+        #map_status span { display: block; }
+        [hidden] { display: none !important; }
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+    <script>
+        let searchParams = null;
+        let locations = null;
+        let mapFailed = false;
+
+        const errorMessages = {
+            coordinates: {
+                de: 'Die Kartenkoordinaten fehlen oder sind ungültig.',
+                fr: 'Les coordonnées de la carte sont manquantes ou invalides.',
+                it: 'Le coordinate della mappa sono mancanti o non valide.'
+            },
+            key: {
+                de: 'Der Kartenschlüssel fehlt.',
+                fr: 'La clé d’accès à la carte est manquante.',
+                it: 'Manca la chiave di accesso alla mappa.'
+            },
+            loading: {
+                de: 'Die Karte konnte nicht geladen werden.',
+                fr: 'Impossible de charger la carte.',
+                it: 'Impossibile caricare la mappa.'
+            },
+            authorization: {
+                de: 'Die Karte konnte nicht autorisiert werden.',
+                fr: 'Impossible d’autoriser la carte.',
+                it: 'Impossibile autorizzare la mappa.'
+            }
+        };
+
+        function showError(reason) {
+            mapFailed = true;
+            document.getElementById('map_container').hidden = true;
+            const status = document.getElementById('map_status');
+            status.replaceChildren(...Object.entries(errorMessages[reason]).map(([language, text]) => {
+                const line = document.createElement('span');
+                line.lang = language;
+                line.textContent = text;
+                return line;
+            }));
+            status.hidden = false;
+        }
+
+        function readCoordinate(name, limit) {
+            const value = searchParams.get(name);
+            if (value === null || value.trim() === '') {
+                return null;
+            }
+            const coordinate = Number(value);
+            return Number.isFinite(coordinate) && Math.abs(coordinate) <= limit ? coordinate : null;
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Base64-encoded URLSearchParams:
+            // postBuildingLatitude=...&postBuildingLongitude=...&postBuildingLabel=...
+            // &permitApplicationLatitude=...&permitApplicationLongitude=...&permitApplicationLabel=...
+            // &googleMapsApiKey=<referrer-restricted key>
+
+            try {
+                let q = window.location.search.substring(1)
+                q = atob(q)
+                searchParams = new URLSearchParams(q);
+            }
+            catch (err) {
+                searchParams = new URLSearchParams(window.location.search);
+            }
+
+            const postBuildingLatitude = readCoordinate('postBuildingLatitude', 90);
+            const postBuildingLongitude = readCoordinate('postBuildingLongitude', 180);
+            const permitApplicationLatitude = readCoordinate('permitApplicationLatitude', 90);
+            const permitApplicationLongitude = readCoordinate('permitApplicationLongitude', 180);
+            if ([postBuildingLatitude, postBuildingLongitude, permitApplicationLatitude, permitApplicationLongitude]
+                .some(value => value === null)) {
+                showError('coordinates');
+                return;
+            }
+            locations = {
+                postBuilding: { lat: postBuildingLatitude, lng: postBuildingLongitude },
+                permitApplication: { lat: permitApplicationLatitude, lng: permitApplicationLongitude }
+            };
+
+            const key = searchParams.get('googleMapsApiKey');
+            if (!key) {
+                showError('key');
+                return;
+            }
+            const script = document.createElement('script');
+            script.async = true;
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&loading=async&callback=initMap&v=weekly`;
+            script.onerror = () => showError('loading');
+            document.body.appendChild(script);
+            setTimeout(() => {
+                if (!document.getElementById('map_status').hidden && !mapFailed) {
+                    showError('loading');
+                }
+            }, 15000);
+        });
+
+        function gm_authFailure() {
+            showError('authorization');
+        }
+
+        // Initialize and add the map
+        async function initMap() {
+            if (mapFailed) {
+                return;
+            }
+            const postBuildingLocation = locations.postBuilding;
+            const permitApplicationLocation = locations.permitApplication;
+            const mapCenter = {
+                lat: (postBuildingLocation.lat + permitApplicationLocation.lat) / 2,
+                lng: (postBuildingLocation.lng + permitApplicationLocation.lng) / 2
+            };
+            const locationsAreDistinct = postBuildingLocation.lat !== permitApplicationLocation.lat
+                || postBuildingLocation.lng !== permitApplicationLocation.lng;
+
+            const postBuildingLabel = searchParams.get('postBuildingLabel') || "";
+            const permitApplicationLabel = searchParams.get('permitApplicationLabel') || "";
+
+            try {
+                const { AdvancedMarkerElement } = await google.maps.importLibrary('marker');
+                if (mapFailed) {
+                    return;
+                }
+                document.getElementById('map_container').hidden = false;
+                const map = new google.maps.Map(document.getElementById('map'), {
+                    zoom: 17,
+                    center: mapCenter,
+                    mapId: 'fdae4a2e75dc1ea557d59a96'
+                });
+                google.maps.event.addListenerOnce(map, 'idle', () => {
+                    if (map.getZoom() > 17) {
+                        map.setZoom(17);
+                    }
+                    if (!mapFailed) {
+                        document.getElementById('map_status').hidden = true;
+                    }
+                });
+                if (locationsAreDistinct) {
+                    const bounds = new google.maps.LatLngBounds();
+                    bounds.extend(postBuildingLocation);
+                    bounds.extend(permitApplicationLocation);
+                    map.fitBounds(bounds, 48);
+                }
+
+                const postBuildingIcon = document.querySelector('#markerStd svg');
+                postBuildingIcon.setAttribute('width', '28');
+                postBuildingIcon.setAttribute('height', '28');
+                postBuildingIcon.style.display = 'block';
+                const postBuildingMarker = new AdvancedMarkerElement({
+                    position: postBuildingLocation,
+                    map,
+                    title: postBuildingLabel,
+                    anchorLeft: '-50%',
+                    anchorTop: '-50%'
+                });
+                postBuildingMarker.append(postBuildingIcon);
+
+                const permitApplicationIcon = document.querySelector('#markerPylon svg');
+                permitApplicationIcon.setAttribute('width', '32');
+                permitApplicationIcon.setAttribute('height', '32');
+                permitApplicationIcon.style.display = 'block';
+                const permitApplicationMarker = new AdvancedMarkerElement({
+                    position: permitApplicationLocation,
+                    map,
+                    title: permitApplicationLabel,
+                    anchorLeft: '-50%',
+                    anchorTop: '-75%'
+                });
+                permitApplicationMarker.append(permitApplicationIcon);
+            } catch (error) {
+                showError('loading');
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div class="viewer">
+        <p id="map_status" role="status" aria-live="polite">
+            <span lang="de">Karte wird geladen ...</span>
+            <span lang="fr">Chargement de la carte ...</span>
+            <span lang="it">Caricamento della mappa ...</span>
+        </p>
+        <div id="map_container" hidden>
+            <div id="map"></div>
+        </div>
+        <div id="markerStd" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="28" height="28" id="svg7200">
+                <!-- <path fill="#fc0" d="M0 0h72v72H0z" /> -->
+                <circle cx="36" cy="36" r="36" fill="darkgray" />
+                <circle cx="36" cy="36" r="34.5" fill="#fc0" />
+                <path fill="red"
+                    d="M34 32.3V19H19.7v10.1H10v13.8h9.7V53H34V39.7h-3.4v10.1h-7.5V39.7h-9.7v-7.4h9.7V22.2h7.5v10.1z" />
+                <path
+                    d="M53.562 31.105c0 2.413-1.991 4.295-4.517 4.295H45.2v-8.3h3.845c2.623 0 4.517 1.689 4.517 4.005zM50.697 19H36v34h9.2V42.9h5.497c6.751 0 11.997-5.151 11.997-11.806C62.694 24.391 57.35 19 50.697 19z" />
+            </svg>
+        </div>
+
+        <div id="markerPylon" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg" id="svg2"
+                viewBox="0 0 571.38 580.48" version="1.1">
+                <defs id="defs4">
+                    <linearGradient id="linearGradient3695">
+                        <stop id="stop3697" style="stop-color:#ffffff" offset="0" />
+                        <stop id="stop3699" style="stop-color:#ffffff;stop-opacity:0" offset="1" />
+                    </linearGradient>
+                    <linearGradient id="linearGradient3626" y2="349.92" gradientUnits="userSpaceOnUse" x2="341.34"
+                        gradientTransform="translate(0,-8)" y1="328.92" x1="432.34">
+                        <stop id="stop3622" style="stop-color:#eeeeec" offset="0" />
+                        <stop id="stop3624" style="stop-color:#eeeeec;stop-opacity:0" offset="1" />
+                    </linearGradient>
+                    <linearGradient id="linearGradient3629" y2="387.68" gradientUnits="userSpaceOnUse" x2="645.22"
+                        y1="387.68" x1="300.55">
+                        <stop id="stop3609" style="stop-color:#2e3436" offset="0" />
+                        <stop id="stop3611" style="stop-color:#2e3436;stop-opacity:0" offset="1" />
+                    </linearGradient>
+                    <linearGradient id="linearGradient3701" y2="284.09" gradientUnits="userSpaceOnUse" x2="355.67"
+                        gradientTransform="translate(-1.4142 -12.243)" y1="284.09" x1="335.17" />
+                    <linearGradient id="linearGradient3705" y2="284.09" gradientUnits="userSpaceOnUse" x2="355.67"
+                        gradientTransform="translate(26.87 122.11)" y1="284.09" x1="335.17" />
+                    <linearGradient id="linearGradient3738" y2="1191.4" gradientUnits="userSpaceOnUse" x2="-573.71"
+                        gradientTransform="translate(337.65 -346.59)" y1="919.43" x1="-838.93">
+                        <stop id="stop3734" style="stop-color:#ce5c00" offset="0" />
+                        <stop id="stop3740" style="stop-color:#f57900" offset=".49952" />
+                        <stop id="stop3736" style="stop-color:#fcaf3e" offset="1" />
+                    </linearGradient>
+                    <filter id="filter3779" color-interpolation-filters="sRGB">
+                        <feGaussianBlur id="feGaussianBlur3781" stdDeviation="3.1485944" />
+                    </filter>
+                    <linearGradient id="linearGradient3791" y2="541.84" gradientUnits="userSpaceOnUse" x2="422.77"
+                        y1="497.99" x1="533.87">
+                        <stop id="stop3787" style="stop-color:#f6f6f5" offset="0" />
+                        <stop id="stop3789" style="stop-color:#f6f6f5;stop-opacity:0" offset="1" />
+                    </linearGradient>
+                    <filter id="filter3852" color-interpolation-filters="sRGB">
+                        <feGaussianBlur id="feGaussianBlur3854" stdDeviation="9.3747496" />
+                    </filter>
+                </defs>
+                <g id="layer1" transform="translate(22.932 -57.094)">
+                    <path id="path3817" style="filter:url(#filter3852);fill:#d3d7cf"
+                        d="m264.12 79.594c-16.569 0-30 8.2913-30 18.531 0 0.44371 0.0129 0.87659 0.0625 1.3125l-100.34 312.06-121.87 60.94c-16.536 8.2678-16.536 21.576 0 29.844l213.19 106.6c16.536 8.2678 43.152 8.2678 59.688 0l213.19-106.59c16.536-8.2678 16.536-21.576 0-29.844l-100.16-50.11-103.85-322.9c0.0496-0.43591 0.0937-0.86879 0.0937-1.3125 0-10.24-13.431-18.531-30-18.531z" />
+                    <rect id="rect3713" ry="33.371"
+                        style="stroke:#2e3436;stroke-width:8.9443;fill:url(#linearGradient3738)"
+                        transform="matrix(.89443 -.44721 .89443 .44721 0 0)" height="305.1" width="305.1" y="549.42"
+                        x="-531.41" />
+                    <path id="path3760" style="opacity:.25714;filter:url(#filter3779);fill:#2e3436"
+                        d="m304.53 536.39-169.02-1.21-78.883-55.62 117.07-72.48 130.83 129.31z" />
+                    <g id="g3762">
+                        <path id="path2816" style="stroke:#2e3436;stroke-width:8;fill:#f57900"
+                            d="m300.12 93.594c-16.569 0-30 8.2913-30 18.531 0 0.44371 0.0129 0.87659 0.0625 1.3125l-109 338.97 0.15625 0.25c3.8 45.32 64.47 81.34 138.75 81.34s134.95-36.02 138.75-81.344l0.1875-0.25-109-338.97c0.0496-0.43591 0.0937-0.86879 0.0937-1.3125 0-10.24-13.431-18.531-30-18.531z" />
+                        <path id="path2833" style="fill:url(#linearGradient3629)"
+                            d="m439.48 387.68c0 47.421-62.201 85.863-138.93 85.863-76.728 0-138.93-38.442-138.93-85.863s62.201-85.863 138.93-85.863c76.728 0 138.93 38.442 138.93 85.863z"
+                            transform="matrix(0.128 0 0 0.128 261.23 62.998)" />
+                        <path id="path3681" style="fill:#eeeeec"
+                            d="m401.41 355.5c-25.341 16.678-61.346 27.099-101.29 27.099-40.636 0-77.213-10.781-102.62-27.969l-16.844 51.938c24.223 25.17 68.65 42.031 119.47 42.031 49.64 0 93.175-16.094 117.73-40.299" />
+                        <path id="path3666" style="fill:#eeeeec"
+                            d="m363.94 235.01c-19.107 6.1199-40.804 13.585-63.812 13.585-23.033 0-44.747-7.4627-63.875-13.594l-18.938 58.688c23.127 10.627 51.783 20.906 82.812 20.906 30.721 0 59.106-10.163 82.104-20.599" />
+                        <path id="path3615" style="fill:url(#linearGradient3626)"
+                            d="m327.29 129.16-15.152 5.0508 61.028 378.46c32.143-10 62.854-58.12 58.813-58.12-4.0406 0-103.68-323.37-104.69-325.39z" />
+                        <path id="path3685" style="fill:url(#linearGradient3701)"
+                            d="m333.75 249.57 8.4853 46.669 12.021-4.2426v-45.255l-20.506 2.8284z" />
+                        <path id="path3703" style="fill:url(#linearGradient3705)"
+                            d="m362.04 383.92 8.4853 46.669 12.021-4.2426 12.728-52.326-33.234 9.8995z" />
+                    </g>
+                    <path id="path3783" style="opacity:.26122;fill:url(#linearGradient3791)"
+                        d="m536.33 477.52-224.5 106.74s-1.4142 19.092 4.2426 18.385c5.6569-0.70711 217.58-107.69 217.58-107.69 10-8 8.3284-16.728 2.6716-17.435z" />
+                </g>
+            </svg>
+        </div>
+
+</body>
+
+</html>
